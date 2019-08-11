@@ -45,7 +45,7 @@ void draw_axes_topright(float r_x, float r_y, float r_z, cv::Mat image);
 
 int main()
 {
-    std::string modelfile, facedetector, landmarkdetector, mappingsfile, contourfile, edgetopologyfile, blendshapesfile;
+    std::string modelfile, landmarkdetector, mappingsfile, contourfile, edgetopologyfile, blendshapesfile;
     
     modelfile = "../share/sfm_shape_3448.bin";
     mappingsfile = "../share/ibug_to_sfm.txt";
@@ -54,8 +54,6 @@ int main()
     blendshapesfile = "../share/expression_blendshapes_3448.bin";
     
     landmarkdetector = "../share/face_landmarks_model_rcr_68.bin";
-    
-    facedetector = "../share/haarcascade_frontalface_alt2.xml";
     
     // Load the Morphable Model and the LandmarkMapper:
     const morphablemodel::MorphableModel morphable_model = morphablemodel::load_model(modelfile);
