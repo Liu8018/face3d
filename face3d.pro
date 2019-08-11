@@ -23,5 +23,3 @@ LIBS += /usr/local/lib/libopencv_imgproc.so \
         /usr/local/lib/libopencv_imgcodecs.so \
         /usr/local/lib/libopencv_videoio.so \
         /usr/local/lib/libopencv_objdetect.so
-
-LIBS += /usr/lib/x86_64-linux-gnu/libboost_*.so
