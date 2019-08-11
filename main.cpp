@@ -28,6 +28,8 @@
 #include <vector>
 #include <iostream>
 
+#include "FaceDetection.h"
+
 using namespace eos;
 using cv::Mat;
 using cv::Vec2f;
@@ -72,14 +74,6 @@ int main()
         return EXIT_FAILURE;
     }
     
-    // Load the face detector from OpenCV:
-    cv::CascadeClassifier face_cascade;
-    if (!face_cascade.load(facedetector))
-    {
-        cout << "Error loading the face detector " << facedetector << "." << endl;
-        return EXIT_FAILURE;
-    }
-    
     cv::VideoCapture cap(0);
     if (!cap.isOpened()) {
         cout << "Couldn't open the given file or camera 0." << endl;
@@ -119,7 +113,8 @@ int main()
         if (!have_face) {
             // Run the face detector and obtain the initial estimate using the mean landmarks:
             vector<Rect> detected_faces;
-            face_cascade.detectMultiScale(unmodified_frame, detected_faces, 1.2, 2, 0, cv::Size(110, 110));
+            //face_cascade.detectMultiScale(unmodified_frame, detected_faces, 1.2, 2, 0, cv::Size(110, 110));
+            g_faceDT.detect(unmodified_frame,detected_faces);
             if (detected_faces.empty()) {
                 cv::imshow("video", frame);
                 cv::waitKey(30);

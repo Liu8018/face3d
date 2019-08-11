@@ -4,9 +4,11 @@ CONFIG -= app_bundle
 CONFIG -= qt
 
 SOURCES += \
+        FaceDetection.cpp \
         main.cpp
 
 HEADERS += \
+    FaceDetection.h \
     helpers.hpp
 
 INCLUDEPATH += $$PWD/include
@@ -23,3 +25,5 @@ LIBS += /usr/local/lib/libopencv_imgproc.so \
         /usr/local/lib/libopencv_imgcodecs.so \
         /usr/local/lib/libopencv_videoio.so \
         /usr/local/lib/libopencv_objdetect.so
+
+LIBS += /home/liu/codes/项目/facerec-gui3/libs/libfacedetection.a
