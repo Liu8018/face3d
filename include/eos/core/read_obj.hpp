@@ -108,13 +108,13 @@ void tokenize(const std::string& str, ContainerType& tokens, const std::string& 
  */
 inline std::pair<Eigen::Vector4f, cpp17::optional<Eigen::Vector3f>> parse_vertex(const std::string& line)
 {
-    std::cout<<"line:"<<line<<std::endl;
+    //std::cout<<"line:"<<line<<std::endl;
 
     std::vector<std::string> tokens;
     tokenize(line, tokens, " ");
 
-    for(size_t i=0;i<tokens.size();i++)
-        std::cout<<"tokens["<<i<<"]:"<<tokens[i]<<std::endl;
+    //for(size_t i=0;i<tokens.size();i++)
+    //    std::cout<<"tokens["<<i<<"]:"<<tokens[i]<<std::endl;
 
     assert(tokens.size() == 3 || tokens.size() == 6); // Maybe we should throw instead?
     const Eigen::Vector4f vertex(std::stof(tokens[0]), std::stof(tokens[1]), std::stof(tokens[2]), 1.0);
@@ -157,25 +157,25 @@ inline auto parse_face(const std::string& line)
     vector<int> texture_indices; // size() = 3 or 4
     vector<int> normal_indices;  // size() = 3 or 4
 
-    std::cout<<"line:"<<line<<std::endl;
+    //std::cout<<"line:"<<line<<std::endl;
 
     vector<string> tokens;
     tokenize(line, tokens, " ");
 
-    for(size_t i=0;i<tokens.size();i++)
-        std::cout<<"tokens["<<i<<"]:"<<tokens[i]<<std::endl;
+    //for(size_t i=0;i<tokens.size();i++)
+    //    std::cout<<"tokens["<<i<<"]:"<<tokens[i]<<std::endl;
 
     assert(tokens.size() == 3 || tokens.size() == 4); // For now we need this to be 3 (triangles) or 4 (quads).
     // Now for each of these tokens, we want to split on "/":
     for (const auto& token : tokens)
     {
-        std::cout<<"token:"<<token<<std::endl;
+        //std::cout<<"token:"<<token<<std::endl;
 
         vector<string> subtokens;
         tokenize(token, subtokens, "/"); // do we want trim_empty true or false?
 
-        for(size_t i=0;i<subtokens.size();i++)
-            std::cout<<"subtokens["<<i<<"]:"<<subtokens[i]<<std::endl;
+        //for(size_t i=0;i<subtokens.size();i++)
+        //    std::cout<<"subtokens["<<i<<"]:"<<subtokens[i]<<std::endl;
 
         assert(subtokens.size() > 0 && subtokens.size() <= 3); // <= 3 correct or not?
         // Ok, let's make our life easy, for now only support the 1/2/3 syntax of the FaceWarehouse scans. In
