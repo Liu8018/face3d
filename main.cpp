@@ -24,6 +24,10 @@
 
 #include <vector>
 #include <iostream>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <fcntl.h>
 
 #include "FaceDetection.h"
 
@@ -35,8 +39,8 @@ public:
     //输入图像并计算
     void inputFrame(const cv::Mat &input);
     
-    //保存参数
-    void save(std::string name);
+    //输出
+    void output();
     
     //得到五个不同视角的脸部图像
     static void get5faces(std::vector<cv::Mat> &faces);
@@ -156,6 +160,7 @@ void Face3d::inputFrame(const cv::Mat &input)
     
     if (!have_face) {
         vector<Rect> detected_faces;
+        
         g_faceDT.detect(unmodified_frame,detected_faces);
         if (detected_faces.empty()) {
             return;
@@ -164,9 +169,7 @@ void Face3d::inputFrame(const cv::Mat &input)
         // Rescale the V&J facebox to make it more like an ibug-facebox:
         // (also make sure the bounding box is square, V&J's is square)
         Rect ibug_facebox = rescale_facebox(detected_faces[0], 0.85, 0.2);
-        
         current_landmarks = rcr_model.detect(unmodified_frame, ibug_facebox);
-        
         have_face = true;
     }
     else {
@@ -177,6 +180,9 @@ void Face3d::inputFrame(const cv::Mat &input)
         current_landmarks = rcr_model.detect(unmodified_frame, enclosing_bbox);
     }
     
+    //time
+    //double st = cv::getTickCount();
+    
     // Fit the 3DMM:
     std::tie(mesh, rendering_params) = fitting::fit_shape_and_pose(
                 morphable_model, blendshapes, rcr_to_eos_landmark_collection(current_landmarks), 
@@ -184,15 +190,40 @@ void Face3d::inputFrame(const cv::Mat &input)
                 ibug_contour, model_contour, 3, 5, 15.0f, cpp17::nullopt, shape_coefficients, 
                 blendshape_coefficients, image_points);
     
+    //time
+    //double rt = (cv::getTickCount()-st)/cv::getTickFrequency();
+    //std::cout<<"fit 3dmm runtime:"<<rt<<std::endl;
+    //st = cv::getTickCount();
+    
     // Extract the texture using the fitted mesh from this frame:
     const Eigen::Matrix<float, 3, 4> affine_cam = fitting::get_3x4_affine_camera_matrix(rendering_params, frame.cols, frame.rows);
+    
+    //time
+    //rt = (cv::getTickCount()-st)/cv::getTickFrequency();
+    //std::cout<<"rest0 runtime:"<<rt<<std::endl;
+    //st = cv::getTickCount();
+    
     isomap = core::to_mat(render::extract_texture(mesh, affine_cam, core::from_mat(unmodified_frame), true, render::TextureInterpolation::NearestNeighbour, 512));
+    
+    //time
+    //rt = (cv::getTickCount()-st)/cv::getTickFrequency();
+    //std::cout<<"rest0.5 runtime:"<<rt<<std::endl;
+    //st = cv::getTickCount();
     
     // Merge the isomaps - add the current one to the already merged ones:
     merged_isomap = isomap_averaging.add_and_merge(isomap);
     
+    //time
+    //rt = (cv::getTickCount()-st)/cv::getTickFrequency();
+    //std::cout<<"rest1 runtime:"<<rt<<std::endl;
+    //st = cv::getTickCount();
+    
     // Same for the shape:
     shape_coefficients = pca_shape_merging.add_and_merge(shape_coefficients);
+    
+    //time
+    //rt = (cv::getTickCount()-st)/cv::getTickFrequency();
+    //std::cout<<"rest2 runtime:"<<rt<<std::endl;
     
     /*
     //test
@@ -242,20 +273,6 @@ void Face3d::test()
     cv::waitKey();
 }
 
-void Face3d::save(std::string name)
-{
-    // save an obj + current merged isomap to the disk:
-    const core::Mesh neutral_expression = 
-            morphablemodel::sample_to_mesh(morphable_model.get_shape_model().draw_sample(shape_coefficients), 
-                                           morphable_model.get_color_model().get_mean(), 
-                                           morphable_model.get_shape_model().get_triangle_list(), 
-                                           morphable_model.get_color_model().get_triangle_list(), 
-                                           morphable_model.get_texture_coordinates());
-    
-    core::write_textured_obj(neutral_expression, "current_merged.obj");
-    cv::imwrite("merged_isomap.png", merged_isomap);
-}
-
 void Face3d::get5faces(std::vector<cv::Mat> &faces)
 {
     core::Mesh mesh = core::read_obj("current_merged.obj");
@@ -274,18 +291,45 @@ void Face3d::get5faces(std::vector<cv::Mat> &faces)
     }
 }
 
-int main()
+void Face3d::output()
 {
-    cv::VideoCapture cap(0);
+    /*
+    // save an obj + current merged isomap to the disk:
+    const core::Mesh neutral_expression = 
+            morphablemodel::sample_to_mesh(morphable_model.get_shape_model().draw_sample(shape_coefficients), 
+                                           morphable_model.get_color_model().get_mean(), 
+                                           morphable_model.get_shape_model().get_triangle_list(), 
+                                           morphable_model.get_color_model().get_triangle_list(), 
+                                           morphable_model.get_texture_coordinates());
     
-    cv::Mat frame;
+    core::write_textured_obj(neutral_expression, "current_merged.obj");
+    */
     
-    while(1)
+    std::string outPath = "./output";
+    
+    if(access(outPath.data(),F_OK) == -1)
+        mkdir(outPath.data(),00777);
+    
+    std::vector<glm::mat4x4> mvnts(5);
+    mvnts[0] = p0; mvnts[1] = p1; mvnts[2] = p2; mvnts[3] = p3; mvnts[4] = p4;
+    for(size_t i=0;i<5;i++)
     {
-        cap >> frame;
-        
-        g_face3d.inputFrame(frame);
-        
-        g_face3d.test();
+        core::Image4u rd;
+        std::tie(rd, std::ignore) = render::render(mesh, mvnts[i], 
+                                                   glm::ortho(-130.0f, 130.0f, -130.0f, 130.0f), 256, 256, 
+                                                   render::create_mipmapped_texture(isomap), true, false, false);
+        cv::imwrite(outPath+"/"+"face"+std::to_string(i)+".png",core::to_mat(rd));
     }
+    
+    cv::imwrite(outPath+"/"+"merged_isomap.png", merged_isomap);
+}
+
+int main(int argc,char **argv)
+{
+    cv::Mat img = cv::imread(argv[1]);
+    
+    g_face3d.inputFrame(img);
+    g_face3d.output();
+    
+    return 0;
 }
