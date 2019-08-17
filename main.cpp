@@ -3,6 +3,7 @@
 #include "eos/core/Landmark.hpp"
 #include "eos/core/LandmarkMapper.hpp"
 #include "eos/core/Mesh.hpp"
+#include "eos/core/read_obj.hpp"
 #include "eos/fitting/fitting.hpp"
 #include "eos/fitting/contour_correspondence.hpp"
 #include "eos/fitting/closest_edge_fitting.hpp"
@@ -21,9 +22,7 @@
 
 #include "Eigen/Dense"
 
-#include "opencv2/core.hpp"
 #include "opencv2/highgui.hpp"
-#include "opencv2/objdetect.hpp"
 
 #include <vector>
 #include <iostream>
@@ -42,6 +41,31 @@ using std::vector;
 using std::string;
 
 void draw_axes_topright(float r_x, float r_y, float r_z, cv::Mat image);
+
+glm::mat4x4 p0(0.99,0.014,0.2,0,
+               0,0.98,-0.2,0,
+               -0.03,0.2,0.98,0,
+               0,0,0,1);
+
+glm::mat4x4 p1(0.95,-0.1,-0.3,0,
+               0.036,0.98,-0.2,0,
+               0.33,0.17,0.93,0,
+               0,0,0,1);
+
+glm::mat4x4 p2(0.96,0,0.3,0,
+               0.04,0.99,-0.15,0,
+               -0.3,0.15,0.94,0,
+               0,0,0,1);
+
+glm::mat4x4 p3(0.99,-0.04,-0.05,0,
+               0.01,0.87,-0.5,0,
+               0.06,0.5,0.87,0,
+               0,0,0,1);
+
+glm::mat4x4 p4(0.99,0.06,-0.03,0,
+               -0.04,0.94,0.34,0,
+               0.04,-0.34,0.94,0,
+               0,0,0,1);
 
 int main()
 {
@@ -169,7 +193,20 @@ int main()
         auto modelview_no_translation = rendering_params.get_modelview();
         modelview_no_translation[3][0] = 0;
         modelview_no_translation[3][1] = 0;
-        std::tie(rendering, std::ignore) = render::render(merged_mesh, modelview_no_translation, glm::ortho(-130.0f, 130.0f, -130.0f, 130.0f), 256, 256, render::create_mipmapped_texture(merged_isomap), true, false, false);
+        
+        /*
+        //test
+        for(int i=0;i<4;i++)
+        {
+            for(int j=0;j<4;j++)
+                std::cout<<modelview_no_translation[i][j]<<" ";
+            std::cout<<"\n"<<std::endl;
+        }
+        */
+        
+        std::tie(rendering, std::ignore) = render::render(merged_mesh, modelview_no_translation, 
+                                                          glm::ortho(-130.0f, 130.0f, -130.0f, 130.0f), 256, 256, 
+                                                          render::create_mipmapped_texture(merged_isomap), true, false, false);
         cv::imshow("render", core::to_mat(rendering));
         
         cv::imshow("video", frame);
@@ -184,6 +221,23 @@ int main()
             const core::Mesh neutral_expression = morphablemodel::sample_to_mesh(morphable_model.get_shape_model().draw_sample(shape_coefficients), morphable_model.get_color_model().get_mean(), morphable_model.get_shape_model().get_triangle_list(), morphable_model.get_color_model().get_triangle_list(), morphable_model.get_texture_coordinates());
             core::write_textured_obj(neutral_expression, "current_merged.obj");
             cv::imwrite("current_merged.isomap.png", merged_isomap);
+        }
+        if(key == 't') {
+            //test
+            cv::Mat isomap = cv::imread("current_merged.isomap.png");
+            core::Mesh mesh = core::read_obj("current_merged.obj");
+            
+            std::vector<glm::mat4x4> mvnts(5);
+            mvnts[0] = p0; mvnts[1] = p1; mvnts[2] = p2; mvnts[3] = p3; mvnts[4] = p4;
+            for(size_t i=0;i<5;i++)
+            {
+                core::Image4u rd;
+                std::tie(rd, std::ignore) = render::render(mesh, mvnts[i], 
+                                                           glm::ortho(-130.0f, 130.0f, -130.0f, 130.0f), 256, 256, 
+                                                           render::create_mipmapped_texture(isomap), true, false, false);
+                cv::imshow("render"+std::to_string(i), core::to_mat(rd));
+            }
+            cv::waitKey();
         }
     }
     

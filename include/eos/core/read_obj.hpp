@@ -86,6 +86,9 @@ void tokenize(const std::string& str, ContainerType& tokens, const std::string& 
 
         last_pos = pos + 1;
     }
+
+    if(tokens[tokens.size()-1] == "")
+        tokens.pop_back();
 }
 
 /**
@@ -105,8 +108,14 @@ void tokenize(const std::string& str, ContainerType& tokens, const std::string& 
  */
 inline std::pair<Eigen::Vector4f, cpp17::optional<Eigen::Vector3f>> parse_vertex(const std::string& line)
 {
+    std::cout<<"line:"<<line<<std::endl;
+
     std::vector<std::string> tokens;
     tokenize(line, tokens, " ");
+
+    for(size_t i=0;i<tokens.size();i++)
+        std::cout<<"tokens["<<i<<"]:"<<tokens[i]<<std::endl;
+
     assert(tokens.size() == 3 || tokens.size() == 6); // Maybe we should throw instead?
     const Eigen::Vector4f vertex(std::stof(tokens[0]), std::stof(tokens[1]), std::stof(tokens[2]), 1.0);
     cpp17::optional<Eigen::Vector3f> vertex_color;
@@ -148,19 +157,31 @@ inline auto parse_face(const std::string& line)
     vector<int> texture_indices; // size() = 3 or 4
     vector<int> normal_indices;  // size() = 3 or 4
 
+    std::cout<<"line:"<<line<<std::endl;
+
     vector<string> tokens;
     tokenize(line, tokens, " ");
+
+    for(size_t i=0;i<tokens.size();i++)
+        std::cout<<"tokens["<<i<<"]:"<<tokens[i]<<std::endl;
+
     assert(tokens.size() == 3 || tokens.size() == 4); // For now we need this to be 3 (triangles) or 4 (quads).
     // Now for each of these tokens, we want to split on "/":
     for (const auto& token : tokens)
     {
+        std::cout<<"token:"<<token<<std::endl;
+
         vector<string> subtokens;
         tokenize(token, subtokens, "/"); // do we want trim_empty true or false?
+
+        for(size_t i=0;i<subtokens.size();i++)
+            std::cout<<"subtokens["<<i<<"]:"<<subtokens[i]<<std::endl;
+
         assert(subtokens.size() > 0 && subtokens.size() <= 3); // <= 3 correct or not?
         // Ok, let's make our life easy, for now only support the 1/2/3 syntax of the FaceWarehouse scans. In
         // fact the normal_indices are 0... we should check for that - zero-index = ignore, but note that, it's
         // probably a non-standard obj format extension.
-        assert(subtokens.size() == 3);                         // FaceWarehouse
+        //assert(subtokens.size() == 3);                         // FaceWarehouse
         vertex_indices.push_back(std::stoi(subtokens[0]) - 1); // obj indices are 1-based, so we subtract one.
         texture_indices.push_back(std::stoi(subtokens[1]) - 1);
         // subtokens[2] is zero, hence, no normal_indices.
@@ -215,7 +236,7 @@ inline Mesh read_obj(std::string filename)
         if (starts_with(line, "v "))
         { // matching with a space so that it doesn't match 'vt'
             auto vertex_data =
-                detail::parse_vertex(line.substr(2)); // pass the string without the first two characters
+                detail::parse_vertex(line.substr(2,line.length()-1)); // pass the string without the first two characters
             mesh.vertices.push_back(
                 Eigen::Vector3f(vertex_data.first[0], vertex_data.first[1], vertex_data.first[2]));
             if (vertex_data.second)
@@ -225,7 +246,7 @@ inline Mesh read_obj(std::string filename)
         }
         if (starts_with(line, "vt "))
         {
-            const auto texcoords = detail::parse_texcoords(line.substr(3));
+            const auto texcoords = detail::parse_texcoords(line.substr(3,line.length()-1));
             mesh.texcoords.push_back(texcoords);
         }
         if (starts_with(line, "vn "))
@@ -236,7 +257,7 @@ inline Mesh read_obj(std::string filename)
         // There's other things like "vp ", which we don't handle
         if (starts_with(line, "f "))
         {
-            auto face_data = detail::parse_face(line.substr(2));
+            auto face_data = detail::parse_face(line.substr(2,line.length()-1));
             if (std::get<0>(face_data).size() == 3) // 3 triangle indices, nothing to do:
             {
                 mesh.tvi.push_back(
