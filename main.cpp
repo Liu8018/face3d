@@ -223,9 +223,19 @@ void Face3d::test()
     cv::namedWindow("merged_isomap",0);
     cv::imshow("merged_isomap",merged_isomap);
     
-    std::vector<cv::Mat> faces;
-    save("");
-    get5faces(faces);
+    std::vector<cv::Mat> faces(5);
+    //save("");
+    //get5faces(faces);
+    std::vector<glm::mat4x4> mvnts(5);
+    mvnts[0] = p0; mvnts[1] = p1; mvnts[2] = p2; mvnts[3] = p3; mvnts[4] = p4;
+    for(size_t i=0;i<5;i++)
+    {
+        core::Image4u rd;
+        std::tie(rd, std::ignore) = render::render(mesh, mvnts[i], 
+                                                   glm::ortho(-130.0f, 130.0f, -130.0f, 130.0f), 256, 256, 
+                                                   render::create_mipmapped_texture(merged_isomap), true, false, false);
+        faces[i] = core::to_mat(rd);
+    }
     for(size_t i=0;i<faces.size();i++)
         cv::imshow("face"+std::to_string(i),faces[i]);
     
